@@ -1,0 +1,56 @@
+@import './styles/themes.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────────── Breezy × Stitch base ───────────── */
+@layer base {
+  html, body, #root { height: 100%; }
+  html { background-color: rgb(var(--c-background)); }
+  body { margin: 0; background-color: rgb(var(--c-background)); color: rgb(var(--c-on-surface)); font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+  ::selection { background: rgb(var(--c-primary) / .28); }
+  :focus-visible { outline: 2px solid rgb(var(--c-primary) / .7); outline-offset: 2px; border-radius: 6px; }
+  button, [role="button"] { cursor: pointer; }
+  input, textarea, select { font-family: inherit; }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+}
+* { scrollbar-width: thin; scrollbar-color: rgb(var(--c-outline-variant)) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--c-outline-variant)); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-outline)); }
+::-webkit-scrollbar-track { background: transparent; }
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined'; font-weight: 400; font-style: normal; line-height: 1;
+  letter-spacing: normal; text-transform: none; display: inline-block; white-space: nowrap; word-wrap: normal;
+  direction: ltr; -webkit-font-feature-settings: 'liga'; font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; user-select: none;
+  width: 1em; height: 1em; overflow: hidden; vertical-align: middle;
+}
+.material-symbols-outlined.fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+
+/* Flat surfaces: legacy decoration classes kept as no-ops so old markup stays valid. */
+.splatter, .splatter-soft { background-color: rgb(var(--c-background)); }
+.coat { box-shadow: none; }
+.hairline { box-shadow: inset 0 0 0 1px rgb(var(--c-outline-variant)); }
+.glow-primary { box-shadow: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { scrollbar-width: none; }
+
+/* Shared workspace primitives: one consistent visual language across tools. */
+@layer components {
+  .breezy-page { @apply w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10; }
+  .breezy-page--narrow { @apply max-w-3xl; }
+  .breezy-page-header { @apply flex flex-col md:flex-row md:items-end md:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8; }
+  .breezy-eyebrow { @apply font-code-sm text-code-sm uppercase tracking-wider text-outline; }
+  .breezy-card { @apply rounded-2xl border border-outline-variant/40 bg-surface-container p-4 sm:p-5; }
+  .breezy-panel { @apply rounded-xl border border-outline-variant/30 bg-surface-container-low p-4; }
+  .breezy-control { @apply w-full min-h-11 rounded-xl border border-outline-variant/50 bg-surface-container-lowest px-3 py-2 text-sm text-on-surface placeholder:text-outline transition-colors; }
+  .breezy-control:focus-visible { @apply outline-none border-primary ring-2 ring-primary/20; }
+  .breezy-button { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .breezy-button--primary { @apply bg-primary text-on-primary hover:brightness-105; }
+  .breezy-button--secondary { @apply border border-outline-variant/50 bg-surface-container text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface; }
+  .breezy-nav-link { @apply relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors; }
+  .breezy-nav-link[aria-current="page"] { @apply bg-surface-container-high text-primary; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

@@ -1,0 +1,156 @@
+import type { EvidenceSource, ResearchClaim } from '../types';
+
+export type EvidenceMapEmptyState = { title: string; description: string };
+
+/** Explain an intentionally skipped claim-extraction pass without implying research failed. */
+export function evidenceMapEmptyState(status?: 'solo_inquiry' | 'model_assessed' | 'insufficient_evidence' | 'incomplete'): EvidenceMapEmptyState {
+  if (status === 'solo_inquiry') {
+    return {
+      title: 'Source records for this investigation',
+      description: 'Breezy used one configured research-model call for the answer and did not make a second model call to extract claim nodes. Source records appear here when search returned them; no claim relationships are generated for this run.',
+    };
+  }
+  if (status === 'incomplete') {
+    return {
+      title: 'Evidence map unavailable',
+      description: 'Structured evidence extraction did not complete. Review the answer and source records, and treat claim-level assessments as unavailable for this run.',
+    };
+  }
+  if (status === 'insufficient_evidence') {
+    return {
+      title: 'No structured claims identified',
+      description: 'The evidence assessment completed but did not return structured claims. Breezy will not invent claim nodes to fill the map.',
+    };
+  }
+  return {
+    title: 'No evidence map for this run',
+    description: 'This investigation did not return structured claims or source records. Breezy will not invent nodes to fill the map. You can still review the answer and activity.',
+  };
+}
+
+export type EvidenceMapSourceNode = {
+  id: string;
+  title: string;
+  url: string;
+  domain?: string;
+  snippet?: string;
+  retrievalStatus?: 'retrieved' | 'unavailable' | 'not_attempted';
+  pageText?: string;
+  retrievedUrl?: string;
+  discovered: boolean;
+};
+
+/** Only permit external HTTP(S) links from untrusted search/model output. */
+/** Cautious labels for model-generated contradiction statuses. */
+export function contradictionResolutionLabel(status: unknown): string {
+  if (status === 'resolved') return 'Model-assessed resolution';
+  if (status === 'contested') return 'Contested';
+  return 'Unclear';
+}
+
+export function safeEvidenceHref(value?: string): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Normalize fragments only: query parameters may change the resource and must not be discarded. */
+export function normalizeEvidenceUrl(value?: string): string {
+  const safeUrl = safeEvidenceHref(value);
+  if (!safeUrl) return '';
+  const url = new URL(safeUrl);
+  url.hash = '';
+  return url.toString();
+}
+
+/** Build map source nodes only from real discovered records or explicit claim references. */
+export function buildEvidenceMapSources(
+  discoveredSources: EvidenceSource[] = [],
+  claims: ResearchClaim[] = [],
+): EvidenceMapSourceNode[] {
+  const byUrl = new Map<string, EvidenceMapSourceNode>();
+
+  for (const source of discoveredSources) {
+    const key = normalizeEvidenceUrl(source.url);
+    if (!key) continue;
+    byUrl.set(key, {
+      id: key,
+      title: source.title || source.domain || source.url,
+      url: source.url,
+      domain: source.domain,
+      snippet: source.snippet,
+      retrievalStatus: source.retrievalStatus,
+      pageText: source.pageText,
+      retrievedUrl: source.retrievedUrl,
+      discovered: true,
+    });
+  }
+
+  for (const claim of claims) {
+    for (const evidence of [...(claim.supportingSources ?? []), ...(claim.counterEvidence ?? [])]) {
+      const key = normalizeEvidenceUrl(evidence.url);
+      if (!key || byUrl.has(key)) continue;
+      byUrl.set(key, {
+        id: key,
+        title: evidence.title || evidence.domain || evidence.url,
+        url: evidence.url,
+        domain: evidence.domain,
+        snippet: evidence.snippet,
+        discovered: false,
+      });
+    }
+  }
+
+  return [...byUrl.values()];
+}
+
+export function claimEvidenceUrls(claim?: ResearchClaim | null): Set<string> {
+  if (!claim) return new Set();
+  return new Set(
+    [...(claim.supportingSources ?? []), ...(claim.counterEvidence ?? [])]
+      .map((source) => normalizeEvidenceUrl(source.url))
+      .filter(Boolean),
+  );
+}
+
+
+/** Present claim labels without implying source support when provenance is missing. */
+export function claimAssessmentPresentation(claim: ResearchClaim): { label: string; icon: string; tone: string } {
+  const statusLabel = claim.status === 'supported'
+    ? 'Model-assessed support'
+    : claim.status === 'contradicted'
+      ? 'Model-assessed contradiction'
+      : 'Unresolved';
+  const statusIcon = claim.status === 'supported'
+    ? 'check_circle'
+    : claim.status === 'contradicted'
+      ? 'report'
+      : 'help';
+  const statusTone = claim.status === 'supported'
+    ? 'text-tertiary'
+    : claim.status === 'contradicted'
+      ? 'text-error'
+      : 'text-[#F59E0B]';
+
+  if (claim.evidenceBasis === 'no_references' || claim.evidenceBasis === 'unmatched_references') {
+    return {
+      label: claim.status === 'unresolved' ? 'Unresolved · no matched references' : 'Model assessment · no matched references',
+      icon: 'help',
+      tone: 'text-[#F59E0B]',
+    };
+  }
+
+  if (claim.evidenceBasis === 'search_snippets_only') {
+    return { label: `${statusLabel} · snippets only`, icon: statusIcon, tone: statusTone };
+  }
+
+  if (!claim.evidenceBasis) {
+    return { label: `${statusLabel} · provenance unavailable`, icon: 'help', tone: 'text-[#F59E0B]' };
+  }
+
+  return { label: statusLabel, icon: statusIcon, tone: statusTone };
+}
