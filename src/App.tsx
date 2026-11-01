@@ -12,6 +12,7 @@ import { SettingsWorkspace } from './components/SettingsWorkspace';
 import { ProfileWorkspace } from './components/ProfileWorkspace';
 import { apiClient } from './services/apiClient';
 import { authService, AuthUser } from './services/authService';
+import { DEV_SKIP_SIGNIN, activateDevSkip, clearDevSkip, isDevSkipActive } from './lib/devSkip';
 import { AuthView } from './components/AuthView';
 import { userProfileService } from './services/userProfileService';
 import { prepareAccountStorage, setActiveAccountUid } from './services/accountStorage';
@@ -34,6 +35,7 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authOpen, setAuthOpen] = useState(false);
   const [authStorageError, setAuthStorageError] = useState<string | null>(null);
+  const [devSkip, setDevSkip] = useState<boolean>(isDevSkipActive);
 
   // Restore the signed-in account's local namespace before mounting any workspace.
   useEffect(() => authService.onAuthChange((user) => {
@@ -145,8 +147,8 @@ export default function App() {
 
   // In review mode, mount the real workspaces without requiring an account.
   // Their local data uses the unscoped browser namespace until auth is restored.
-  const workspaceEnabled = !AUTH_REQUIRED || Boolean(authUser);
-  const showAuthGate = AUTH_REQUIRED && !authUser;
+  const workspaceEnabled = !AUTH_REQUIRED || Boolean(authUser) || devSkip;
+  const showAuthGate = AUTH_REQUIRED && !authUser && !devSkip;
 
   if (showAuthGate) {
     if (authLoading) return <div className="min-h-[100dvh] grid place-items-center bg-background text-on-surface-variant" role="status">Checking your session…</div>;
@@ -159,13 +161,19 @@ export default function App() {
         </div>
       </div>
     );
-    return <AuthView />;
+    return <AuthView onSkip={DEV_SKIP_SIGNIN ? () => { activateDevSkip(); setDevSkip(true); } : undefined} />;
   }
 
   return (
     <>
       <Shell tab={activeTab} go={navigateTo} backendOnline={backendOnline} endpointName={endpointName} previewMode={false}>
         <div className="relative min-h-full">
+          {devSkip && !authUser && (
+            <div role="status" className="flex flex-wrap items-center gap-2 border-b border-tertiary/40 bg-tertiary/10 px-4 py-2 font-body-sm text-body-sm text-on-surface-variant">
+              <span className="flex-1 min-w-[200px]">Preview mode: sign-in skipped. Research and server features will not work until you sign in. Remove this before deploying.</span>
+              <button type="button" onClick={() => { clearDevSkip(); setDevSkip(false); }} className="text-primary underline underline-offset-4">Sign in</button>
+            </div>
+          )}
           {authUser && authUser.providerId === 'password' && !authUser.emailVerified && (
             <div role="status" className="flex flex-wrap items-center gap-2 border-b border-outline-variant/40 bg-surface-container-low px-4 py-2 font-body-sm text-body-sm text-on-surface-variant">
               <span className="flex-1 min-w-[200px]">Confirm your email address using the link we sent to {authUser.email}.</span>

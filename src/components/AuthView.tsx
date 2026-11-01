@@ -31,7 +31,7 @@ function readableAuthError(error: unknown): string {
   return messages[code] || (error instanceof Error ? error.message : 'Sign-in failed. Please try again.');
 }
 
-export const AuthView: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
+export const AuthView: React.FC<{ onClose?: () => void; onSkip?: () => void }> = ({ onClose, onSkip }) => {
   const asPage = !onClose;
   const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
@@ -109,6 +109,12 @@ export const AuthView: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
             </>
           )}
         </div>
+        {onSkip && (
+          <div className="mt-5 rounded-xl border border-dashed border-outline-variant/70 p-3 text-center">
+            <button type="button" onClick={onSkip} className="min-h-10 px-4 rounded-lg text-primary font-label-md text-label-md hover:bg-surface-container-high transition-colors">Skip for now (preview only)</button>
+            <p className="mt-1 font-code-sm text-code-sm text-outline">Temporary. Opens the workspace without an account; research and server features need sign-in.</p>
+          </div>
+        )}
         {asPage && <p className="text-center font-body-sm text-body-sm mt-5"><a href="/" className="text-on-surface-variant hover:text-primary underline underline-offset-4">Back to the Breezy site</a></p>}
         <p className="text-center font-body-sm text-body-sm text-outline mt-5">Google Workspace and GitHub integrations are authorized separately when you choose to use them.</p>
       </div>
